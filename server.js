@@ -24,15 +24,57 @@ const routeInputPath = path.join(dataDir, 'route_input.json');
 const graphOutputPath = path.join(dataDir, 'graph.json');
 const routeOutputPath = path.join(dataDir, 'route.json');
 
+// Comprehensive startup checks
+async function startupChecks() {
+    console.log('=== Railway Startup Checks ===');
+    console.log('Current directory:', __dirname);
+    console.log('Node version:', process.version);
+    console.log('Platform:', process.platform);
+    
+    try {
+        // Check backend build directory
+        const buildFiles = await fs.readdir(backendBuildDir);
+        console.log('Backend build files:', buildFiles);
+        
+        // Check if executables have execute permissions
+        const generatorPath = path.join(backendBuildDir, 'generator');
+        const dijkstraPath = path.join(backendBuildDir, 'dijkstra');
+        
+        try {
+            await fs.access(generatorPath);
+            console.log('✓ Generator executable exists');
+            
+            // Check permissions
+            const stats = await fs.stat(generatorPath);
+            console.log('Generator permissions:', stats.mode.toString(8));
+        } catch (error) {
+            console.error('✗ Generator executable not found:', generatorPath);
+        }
+        
+        try {
+            await fs.access(dijkstraPath);
+            console.log('✓ Dijkstra executable exists');
+            
+            // Check permissions
+            const stats = await fs.stat(dijkstraPath);
+            console.log('Dijkstra permissions:', stats.mode.toString(8));
+        } catch (error) {
+            console.error('✗ Dijkstra executable not found:', dijkstraPath);
+        }
+    } catch (error) {
+        console.error('Backend build directory error:', error);
+    }
+}
+
 // Ensure required directories exist
 async function ensureDirectories() {
     try {
         await fs.mkdir(dataDir, { recursive: true });
         await fs.mkdir(savedGraphsDir, { recursive: true });
         await fs.mkdir(backendBuildDir, { recursive: true });
-        console.log('Directories initialized');
+        console.log('✓ Directories initialized');
     } catch (error) {
-        console.error('Error creating directories:', error);
+        console.error('✗ Error creating directories:', error);
     }
 }
 
@@ -40,7 +82,7 @@ async function ensureDirectories() {
 async function ensureDataFiles() {
     const files = [
         { path: graphInputPath, default: { nodeCount: 10, method: 'random' } },
-        { path: routeInputPath, default: { source: 1, destination: 92, battery: 100, mileage: 10 } },
+        { path: routeInputPath, default: { source: 1, destination: 2, battery: 100, mileage: 10 } },
         { path: graphOutputPath, default: { nodes: [], edges: [], name: 'Default Graph' } },
         { path: routeOutputPath, default: { success: false, message: 'No path computed' } }
     ];
@@ -48,10 +90,11 @@ async function ensureDataFiles() {
     for (const file of files) {
         try {
             await fs.access(file.path);
+            console.log(`✓ File exists: ${file.path}`);
         } catch {
             // File doesn't exist, create it with default content
             await fs.writeFile(file.path, JSON.stringify(file.default, null, 2));
-            console.log(`Created default file: ${file.path}`);
+            console.log(`✓ Created default file: ${file.path}`);
         }
     }
 }
@@ -61,6 +104,7 @@ async function ensureDataFiles() {
 // Generate graph endpoint
 app.post('/generateGraph', async (req, res) => {
     try {
+        console.log('=== Generate Graph Request ===');
         const { nodeCount, method } = req.body;
 
         // Validate input
@@ -85,16 +129,46 @@ app.post('/generateGraph', async (req, res) => {
         };
 
         await fs.writeFile(graphInputPath, JSON.stringify(inputData, null, 2));
-        console.log('Graph input written to:', graphInputPath);
+        console.log('✓ Graph input written to:', graphInputPath);
 
-        // Execute graph generator from the data directory
+        // Execute graph generator
         const generatorPath = path.join(backendBuildDir, 'generator');
         
+        console.log('Generator path:', generatorPath);
+        console.log('Data directory:', dataDir);
+        
+        // Check if generator exists and is executable
         try {
-            await execAsync(`cd "${dataDir}" && "${generatorPath}"`);
-            console.log('Graph generator executed successfully');
+            await fs.access(generatorPath);
+            console.log('✓ Generator executable found');
+            
+            // Check if it's executable
+            const stats = await fs.stat(generatorPath);
+            const isExecutable = !!(stats.mode & 0o111);
+            console.log('Generator is executable:', isExecutable);
+            
+            if (!isExecutable) {
+                console.log('⚠ Generator not executable, fixing permissions...');
+                await fs.chmod(generatorPath, 0o755);
+            }
+        } catch (error) {
+            console.error('✗ Generator executable not found or inaccessible:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Generator executable not found on server'
+            });
+        }
+
+        try {
+            console.log('🚀 Executing generator...');
+            const { stdout, stderr } = await execAsync(`cd "${dataDir}" && "${generatorPath}"`);
+            console.log('✓ Graph generator executed successfully');
+            if (stdout) console.log('Generator stdout:', stdout);
+            if (stderr) console.log('Generator stderr:', stderr);
         } catch (execError) {
-            console.error('Graph generator execution failed:', execError);
+            console.error('✗ Graph generator execution failed:', execError);
+            console.error('Error stdout:', execError.stdout);
+            console.error('Error stderr:', execError.stderr);
             return res.status(500).json({
                 success: false,
                 message: 'Failed to generate graph: ' + execError.message
@@ -111,6 +185,7 @@ app.post('/generateGraph', async (req, res) => {
             });
         }
 
+        console.log('✓ Graph generated successfully with', graphData.nodes?.length, 'nodes');
         res.json({
             success: true,
             graph: graphData,
@@ -118,7 +193,7 @@ app.post('/generateGraph', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in /generateGraph:', error);
+        console.error('✗ Error in /generateGraph:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error: ' + error.message
@@ -129,6 +204,7 @@ app.post('/generateGraph', async (req, res) => {
 // Find path endpoint
 app.post('/findPath', async (req, res) => {
     try {
+        console.log('=== Find Path Request ===');
         const { source, destination, battery, mileage } = req.body;
 
         // Validate input
@@ -156,6 +232,7 @@ app.post('/findPath', async (req, res) => {
         // Check if graph exists
         try {
             await fs.access(graphOutputPath);
+            console.log('✓ Graph file exists');
         } catch {
             return res.status(400).json({
                 success: false,
@@ -172,16 +249,45 @@ app.post('/findPath', async (req, res) => {
         };
 
         await fs.writeFile(routeInputPath, JSON.stringify(inputData, null, 2));
-        console.log('Route input written to:', routeInputPath);
+        console.log('✓ Route input written to:', routeInputPath);
 
-        // Execute Dijkstra's algorithm from the data directory
+        // Execute Dijkstra's algorithm
         const dijkstraPath = path.join(backendBuildDir, 'dijkstra');
         
+        console.log('Dijkstra path:', dijkstraPath);
+        
+        // Check if dijkstra exists and is executable
         try {
-            await execAsync(`cd "${dataDir}" && "${dijkstraPath}"`);
-            console.log('Dijkstra executed successfully');
+            await fs.access(dijkstraPath);
+            console.log('✓ Dijkstra executable found');
+            
+            // Check if it's executable
+            const stats = await fs.stat(dijkstraPath);
+            const isExecutable = !!(stats.mode & 0o111);
+            console.log('Dijkstra is executable:', isExecutable);
+            
+            if (!isExecutable) {
+                console.log('⚠ Dijkstra not executable, fixing permissions...');
+                await fs.chmod(dijkstraPath, 0o755);
+            }
+        } catch (error) {
+            console.error('✗ Dijkstra executable not found or inaccessible:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Dijkstra executable not found on server'
+            });
+        }
+        
+        try {
+            console.log('🚀 Executing Dijkstra...');
+            const { stdout, stderr } = await execAsync(`cd "${dataDir}" && "${dijkstraPath}"`);
+            console.log('✓ Dijkstra executed successfully');
+            if (stdout) console.log('Dijkstra stdout:', stdout);
+            if (stderr) console.log('Dijkstra stderr:', stderr);
         } catch (execError) {
-            console.error('Dijkstra execution failed:', execError);
+            console.error('✗ Dijkstra execution failed:', execError);
+            console.error('Error stdout:', execError.stdout);
+            console.error('Error stderr:', execError.stderr);
             return res.status(500).json({
                 success: false,
                 message: 'Failed to find path: ' + execError.message
@@ -198,10 +304,11 @@ app.post('/findPath', async (req, res) => {
             });
         }
 
+        console.log('✓ Pathfinding completed:', pathResult.success ? 'SUCCESS' : 'FAILED');
         res.json(pathResult);
 
     } catch (error) {
-        console.error('Error in /findPath:', error);
+        console.error('✗ Error in /findPath:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error: ' + error.message
@@ -254,7 +361,7 @@ app.post('/saveGraph', async (req, res) => {
 
         // Save graph
         await fs.writeFile(filePath, JSON.stringify(graphToSave, null, 2));
-        console.log('Graph saved to:', filePath);
+        console.log('✓ Graph saved to:', filePath);
 
         res.json({
             success: true,
@@ -422,35 +529,20 @@ app.use((req, res) => {
 
 // Initialize and start server
 async function startServer() {
-    await ensureDirectories();
-    await ensureDataFiles(); // Add this line to create default JSON files
+    console.log('🚀 Starting Graph Visualization Server...');
     
-    // Check if backend executables exist
-    try {
-        const generatorExists = await fs.access(path.join(backendBuildDir, 'generator.exe'))
-            .then(() => true)
-            .catch(() => false);
-        
-        const dijkstraExists = await fs.access(path.join(backendBuildDir, 'dijkstra.exe'))
-            .then(() => true)
-            .catch(() => false);
-
-        if (!generatorExists || !dijkstraExists) {
-            console.warn('Warning: Backend executables not found in build directory.');
-            console.warn('Please compile the C++ code and place executables in backend/build/');
-        }
-    } catch (error) {
-        console.warn('Warning: Could not check backend executables:', error.message);
-    }
-
+    await ensureDirectories();
+    await ensureDataFiles();
+    await startupChecks();
+    
     app.listen(port, () => {
         console.log('=================================');
         console.log('Graph Visualization Server');
         console.log('=================================');
-        console.log(`Server running on http://localhost:${port}`);
-        console.log(`Data directory: ${dataDir}`);
-        console.log(`Saved graphs: ${savedGraphsDir}`);
-        console.log(`Backend build: ${backendBuildDir}`);
+        console.log(`✅ Server running on port: ${port}`);
+        console.log(`📁 Data directory: ${dataDir}`);
+        console.log(`💾 Saved graphs: ${savedGraphsDir}`);
+        console.log(`⚙️  Backend build: ${backendBuildDir}`);
         console.log('=================================');
     });
 }
