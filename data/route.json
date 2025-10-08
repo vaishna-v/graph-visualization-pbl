@@ -1,0 +1,19 @@
+{
+    "batteryRemaining": 80,
+    "message": "Path found successfully",
+    "path": [
+        2,
+        1,
+        62,
+        65,
+        69,
+        79,
+        89,
+        90,
+        100,
+        92
+    ],
+    "success": true,
+    "totalBatteryUsed": 20,
+    "totalDistance": 182
+}

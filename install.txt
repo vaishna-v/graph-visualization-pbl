@@ -1,0 +1,6 @@
+cd backend/src
+g++ -std=c++11 -I. -o ../build/generator.exe generator.cpp graph.cpp
+g++ -std=c++11 -I. -o ../build/dijkstra.exe dijkstra.cpp graph.cpp minheap.cpp
+cd ../..
+
+npm install

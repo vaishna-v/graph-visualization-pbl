@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Visualization & Pathfinding - DS PBL Project</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>Route Finding Algorithm</h1>
+            <p class="subtitle">PBL Project for Data Structure (TCS - 302)</p>
+            <a href="about.html" id="aboutBtn" class="about-button">About Project</a>
+
+        </header>
+
+        <!-- Main Content - REVERSED ORDER -->
+        <div class="main-content">
+            <!-- LEFT Panel - Visualization -->
+            <div class="visualization-panel">
+                <!-- Graph Controls -->
+                 <!---->
+                
+
+                <!-- Graph Container -->
+                <div id="graph-container" class="graph-container">
+                    <div class="graph-placeholder">
+                        <p>Graph visualization will appear here</p>
+                    </div>
+                </div>
+
+                <!-- Message Area -->
+                <div id="message-area" class="message-area"></div>
+            </div>
+
+
+
+            <!-- RIGHT Panel - Controls -->
+            <div class="control-panel">
+                <!-- Graph Generation Section -->
+                <section class="control-section">
+                    <h3>Graph Generation</h3>
+                    
+                    <div class="form-group">
+                        <label for="node-count">Number of Nodes:</label>
+                        <input type="number" id="node-count" min="2" max="500" value="100" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="graph-method">Generation Method:</label>
+                        <select id="graph-method" class="form-select">
+                            <option value="sliding_window">Sliding Window</option>
+                            <option value="random">Truly Random</option>
+                        </select>
+                    </div>
+
+
+                    <button id="generate-graph-btn" class="btn btn-primary">
+                        Generate Graph
+                    </button>
+                </section>
+
+
+                <div class="control-sections-container">
+
+                <!-- Pathfinding Section -->
+                <section class="control-section">
+                    <h3>Pathfinding (Dijkstra's Algorithm)</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="source-node">Source Node:</label>
+                            <input type="number" id="source-node" min="1" value="21" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="destination-node">Destination Node:</label>
+                            <input type="number" id="destination-node" min="1" value="92" class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="battery">Initial Battery:</label>
+                            <input type="number" id="battery" min="1" value="100" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="mileage">Mileage:</label>
+                            <input type="number" id="mileage" min="1" value="10" class="form-input">
+                        </div>
+                    </div>
+
+                    
+
+                    <div class="button-group">
+                        <button id="find-path-btn" class="btn btn-success">
+                            Find Path
+                        </button>
+                        <button id="clear-path-btn" class="btn btn-secondary">
+                            Clear
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Graph Persistence Section -->
+                <section class="control-section">
+                    <h3>Graph Persistence</h3>
+                    
+                    <div class="form-group">
+                        <label for="save-graph-name">Save Graph As:</label>
+                        <input type="text" id="save-graph-name" placeholder="Enter graph name" class="form-input">
+                        <button id="save-graph-btn" class="btn btn-warning">
+                            Save Graph
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="load-graph-select">Load Saved Graph:</label>
+                        <div class="load-controls">
+                            <select id="load-graph-select" class="form-select">
+                                <option value="">Select a graph to load</option>
+                            </select>
+                            <button id="refresh-graphs-btn" class="btn btn-icon" title="Refresh list">
+                                ↻
+                            </button>
+                        </div>
+                        <div class="saved-graphs-count" id="saved-graphs-count">(0 saved)</div>
+                    </div>
+                </section>
+
+                <!-- Graph Information -->
+                <section class="control-section">
+                    <h3>Graph Information</h3>
+                    <div id="graph-info" class="graph-info">
+                        <div class="graph-stats">
+                            <h4>No Graph Loaded</h4>
+                            <p>Generate or load a graph to see information</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Path Results -->
+                <section class="control-section">
+                    <h3>Path Results</h3>
+                    <div id="path-results" class="path-results">
+                        <div class="path-result initial">
+                            <h4>Path Results</h4>
+                            <p>Execute pathfinding to see results here.</p>
+                        </div>
+                    </div>
+                </section>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/graphRenderer.js"></script>
+    <script src="js/uiController.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
